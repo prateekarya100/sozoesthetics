@@ -24,6 +24,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="Sozo Call Manager"
+            android:launchMode="singleTask"
             android:theme="@style/Theme.SozoCallManager">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
