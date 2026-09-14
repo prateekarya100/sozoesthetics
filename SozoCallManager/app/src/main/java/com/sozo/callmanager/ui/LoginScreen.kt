@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -16,6 +17,7 @@ import com.sozo.callmanager.data.DemoSession
 
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit) {
+    val context = LocalContext.current
     var employeeId by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -73,7 +75,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
             Button(
                 onClick = {
-                    if (DemoSession.login(employeeId, password)) {
+                    if (DemoSession.login(context, employeeId, password)) {
                         onLoginSuccess()
                     } else {
                         error = "Invalid employee ID or password"

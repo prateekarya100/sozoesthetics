@@ -47,6 +47,13 @@ object CallLogRepository {
                     CallLog.Calls.INCOMING_TYPE -> CallType.INCOMING
                     CallLog.Calls.OUTGOING_TYPE -> CallType.OUTGOING
                     CallLog.Calls.MISSED_TYPE -> CallType.MISSED
+                    // A call the user explicitly declined, or one blocked by
+                    // the OS, never got through — for reporting purposes
+                    // that's the same as "missed" (previously these silently
+                    // fell into UNKNOWN, which is why Total didn't match
+                    // Incoming + Outgoing + Missed).
+                    CallLog.Calls.REJECTED_TYPE -> CallType.MISSED
+                    CallLog.Calls.BLOCKED_TYPE -> CallType.MISSED
                     else -> CallType.UNKNOWN
                 }
                 val number = it.getString(numberCol) ?: "Unknown"

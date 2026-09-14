@@ -8,9 +8,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -78,6 +80,38 @@ fun ReportsScreen(refreshTick: State<Int>) {
         myCalls.groupBy { it.number }
             .map { (num, calls) -> NumberGroup(num, calls.sortedByDescending { it.timestampMillis }) }
             .sortedByDescending { it.calls.size }
+    }
+
+    // Builds one lowercase "searchable blob" per number — name(s), the
+    // number itself, and every saved note — so typing a name, number, or
+    // note keyword all work the same way.
+    val searchableGroups = remember(numberGroups) {
+        numberGroups.map { group ->
+            val names = group.calls.map { it.displayName }.distinct()
+            val notes = group.calls.mapNotNull { CallNotesStore.getNote(context, it.id) }
+            val blob = (listOf(group.number) + names + notes).joinToString(" ").lowercase()
+            group to blob
+        }
+    }
+
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredGroups = remember(searchableGroups, searchQuery) {
+        val q = searchQuery.trim().lowercase()
+        if (q.isBlank()) {
+            searchableGroups.map { it.first }
+        } else {
+            searchableGroups
+                .filter { (_, blob) -> blob.contains(q) }
+                // Closest matches first: number/name starting with what was
+                // typed beats a match buried inside a note.
+                .sortedWith(
+                    compareBy(
+                        { (_, blob) -> !blob.startsWith(q) },
+                        { (group, _) -> group.number }
+                    )
+                )
+                .map { it.first }
+        }
     }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -158,12 +192,22 @@ fun ReportsScreen(refreshTick: State<Int>) {
                 Spacer(Modifier.height(24.dp))
                 Text("Today", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                MyTodayCard(
-                    total = todaysCalls.size,
-                    incoming = todaysCalls.count { it.type == CallType.INCOMING },
-                    outgoing = todaysCalls.count { it.type == CallType.OUTGOING },
-                    missed = todaysCalls.count { it.type == CallType.MISSED }
-                )
+                run {
+                    val incomingToday = todaysCalls.count { it.type == CallType.INCOMING }
+                    val outgoingToday = todaysCalls.count { it.type == CallType.OUTGOING }
+                    val missedToday = todaysCalls.count { it.type == CallType.MISSED }
+                    MyTodayCard(
+                        // Deliberately the sum of the three shown categories
+                        // (not todaysCalls.size) — this guarantees the big
+                        // number on top can never disagree with In/Out/Missed
+                        // below it, even for rare call types we don't
+                        // explicitly bucket (e.g. voicemail).
+                        total = incomingToday + outgoingToday + missedToday,
+                        incoming = incomingToday,
+                        outgoing = outgoingToday,
+                        missed = missedToday
+                    )
+                }
 
                 Spacer(Modifier.height(24.dp))
                 Text("Calls by number", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -172,14 +216,49 @@ fun ReportsScreen(refreshTick: State<Int>) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search by name, number, or note\u2026") },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Filled.Close, contentDescription = "Clear search")
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (searchQuery.isNotBlank()) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "${filteredGroups.size} match${if (filteredGroups.size != 1) "es" else ""}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Spacer(Modifier.height(8.dp))
             }
         }
 
         if (hasAnyData) {
-            items(numberGroups, key = { it.number }) { group ->
-                NumberGroupCard(group)
-                Spacer(Modifier.height(10.dp))
+            if (filteredGroups.isEmpty()) {
+                item {
+                    Text(
+                        "No number, name, or note matches \u201C$searchQuery\u201D.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 12.dp)
+                    )
+                }
+            } else {
+                items(filteredGroups, key = { it.number }) { group ->
+                    NumberGroupCard(group)
+                    Spacer(Modifier.height(10.dp))
+                }
             }
         }
     }

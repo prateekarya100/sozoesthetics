@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import com.sozo.callmanager.data.DemoSession
 import com.sozo.callmanager.dialer.CallHolder
@@ -44,6 +45,7 @@ private enum class MainTab(val label: String, val icon: ImageVector) {
 
 @Composable
 fun MainScaffold(onLogout: () -> Unit) {
+    val context = LocalContext.current
     var selectedTab by remember { mutableStateOf(MainTab.RECENTS) }
     val refreshTick = rememberCallLogRefreshTrigger()
 
@@ -69,7 +71,7 @@ fun MainScaffold(onLogout: () -> Unit) {
                     }
                 },
                 actions = {
-                    TextButton(onClick = { DemoSession.logout(); onLogout() }) { Text("Log out") }
+                    TextButton(onClick = { DemoSession.logout(context); onLogout() }) { Text("Log out") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,

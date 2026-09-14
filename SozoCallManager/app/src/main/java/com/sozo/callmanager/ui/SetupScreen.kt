@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.sozo.callmanager.data.DemoSession
 
 private val requiredPermissions = buildList {
     add(android.Manifest.permission.READ_CALL_LOG)
@@ -99,7 +100,10 @@ fun SetupScreen(onSetupComplete: () -> Unit) {
             Spacer(Modifier.weight(1f))
 
             Button(
-                onClick = onSetupComplete,
+                onClick = {
+                    DemoSession.markSetupComplete(context)
+                    onSetupComplete()
+                },
                 enabled = permissionsGranted && isDefaultDialerNow,
                 modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
